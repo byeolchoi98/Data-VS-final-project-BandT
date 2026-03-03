@@ -1,7 +1,6 @@
-# Large data files
-child_poverty_rate_2024.csv
-food_insecurity_2024.csv
+# Large data files (keep local only)
+data/raw-data/child_poverty_rate_2024.csv
+data/raw-data/food_insecurity_2024.csv
 
-# Large shape files
+# Large shapefiles
 data/raw-data/shp_file/county/
-
