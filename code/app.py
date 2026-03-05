@@ -24,10 +24,6 @@
 #   streamlit run code/app.py
 # ============================================================
 
-url = "https://www2.census.gov/geo/tiger/TIGER2024/COUNTY/tl_2024_us_county.zip"
-
-from __future__ import annotations
-
 from pathlib import Path
 import numpy as np
 import pandas as pd
