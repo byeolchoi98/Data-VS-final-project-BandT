@@ -13,7 +13,7 @@ format:
     number-sections: false
 
 fontsize: 10pt
-geometry: margin=1in
+geometry: margin=0.7in
 ---
 # 1. Motivation
 
@@ -23,11 +23,9 @@ Federal school nutrition programs — especially the Community Eligibility Provi
 This project asks three connected questions:
 
 - Do higher CEP participation rates correspond to lower food hardship?
-- Does higher NSLP spending per school-age child relate to improved outcomes?
-- Are hardship patterns geographically clustered? 
-\ 
-Rather than focusing only on regression estimates, this project emphasizes **visual and spatial evidence**, combining mapping, OLS, and spatial autocorrelation analysis.
----
+- Does higher NSLP spending per school-age child relate to improved outcomes?  
+
+Rather than focusing only on regression estimates, this project emphasizes **visual and spatial evidence**.
 
 # 2. Data and Construction
 ## State level visualization  
@@ -165,7 +163,6 @@ cep_county_IL.to_csv(r"..\data\derived-data\cep_county_IL.csv", index=False)
 
 ## OLS regression analysis (state-level)  
 For OLS regression, we add additional variables to the master data for more robust analysis (master_merged_with_controls.csv). Detailed information is descrived in README.qmd.
----
 
 # 3. Visualizing Geographic Variation
 ## State level visualization  
@@ -201,7 +198,7 @@ plot_1 = alt.Chart(df_plus_vote).mark_circle(size=80, opacity=0.8).encode(
         alt.Tooltip("dem_margin:Q", title="Dem margin", format=".2f"),
     ],
 ).properties(
-    title="CEP Participation vs Child food insufficiency (colored by Democratic margin)"
+    title="CEP Participation vs Child food insufficiency (colored by Democratic margin)", width = 400, height= 300
 )
 plot_1.save("../figures/plot_1.png", scale_factor=2)
 
@@ -223,6 +220,8 @@ For the county-level analysis, we put the three data on the IL map, child povert
 ```{python}
 #| echo: false
 #| eval: True
+#| warning: false
+#| message: false
 import altair as alt
 import geopandas as gpd
 import json
@@ -352,112 +351,22 @@ plot_2 = county_map_three_panels(gdf_il)
 plot_2.save("../figures/plot_2.png", scale_factor=2)
 ```
 ![](../figures/plot_2.png){width=90%}
+
 ### Visual Pattern
 
 - It appears that cep participation rate is slightly positively correlated with the child poverty rate.
 - This means that the policy covers those in need to some extent even at the county level.
 - However, from the visual insepction, it is difficult to capture the spatial pattern or correlation between cep rate and the other two variables.  
 Combined with the state-level visualization, it appears that the policy targeting is aligned with high-need regions. However, looking at the political effect, its correlation with the cep rate is pronounced, espetically at the state level.
----
 
 # 4. Regression Analysis
+This is discussed in the appendix
 
-To evaluate the relationship between policy variables and hardship, we estimate OLS models controlling for socioeconomic characteristics.
-
-The specification includes:
-
-- `cep_rate_school`
-- `nslp_total_dollars_per_school_age`
-- Median household income
-- Unemployment rate
-- SNAP participation
-- Family structure
-- Racial/ethnic composition
-
-Example specification:
-
-
-
-```{python}
-#| echo: false
-#| eval: false
-
-import pandas as pd
-import numpy as np
-import statsmodels.api as sm
-
-# ============================================================
-# Load the data
-# ============================================================
-master = pd.read_csv(r"..\data\derived-data\master_state_with_controls.csv")
-
-
-# ============================================================
-# OLS (3 outcomes)
-# ============================================================
-# Scale income for readability
-master["median_hh_income_k"] = master["median_hh_income"] / 1000.0
-
-X_cols = [
-    "cep_rate_school",
-    "nslp_total_dollars_per_school_age",
-    "median_hh_income_k",
-    "unemployment_rate",
-    "snap_household_pct",
-    "single_parent_pct",
-    "pct_black",
-    "pct_hispanic",
-]
-
-for c in X_cols + ["poverty_rate_children", "child_food_insec_rate", "food_insufficiency_weighted"]:
-    master[c] = pd.to_numeric(master[c], errors="coerce")
-
-# Model 1: child poverty
-df1 = master.dropna(subset=["poverty_rate_children"] + X_cols).copy()
-m1 = sm.OLS(df1["poverty_rate_children"], sm.add_constant(df1[X_cols])).fit(cov_type="HC1")
-print("\n====================")
-print("OLS: Child Poverty Rate")
-print("====================")
-print(m1.summary())
-
-# Model 2: child food insecurity
-df2 = master.dropna(subset=["child_food_insec_rate"] + X_cols).copy()
-m2 = sm.OLS(df2["child_food_insec_rate"], sm.add_constant(df2[X_cols])).fit(cov_type="HC1")
-print("\n====================")
-print("OLS: Child Food Insecurity Rate")
-print("====================")
-print(m2.summary())
-
-# Model 3: child food insecurity
-
-df3 = master.dropna(subset=["food_insufficiency_weighted"] + X_cols).copy()
-m3 = sm.OLS(df3["food_insufficiency_weighted"], sm.add_constant(df3[X_cols])).fit(cov_type="HC1")
-print("\n====================")
-print("OLS: Child Food Insufficiency Rate")
-print("====================")
-print(m3.summary())
-```
-
-### Core Findings
-
-- CEP participation: not statistically significant
-- NSLP spending: not statistically significant
-- Median income: strong negative association
-- Unemployment: positive and significant
-- Racial composition variables: correlated with hardship
-- R² ≈ 0.71 (food insufficiency model)
-
-### Interpretation
-
-At the state level, structural economic conditions explain more variation than program intensity measures.
-However, regression alone cannot capture spatial dependence.
-
----
 
 # 5. Streamlit
-For dynamic visualization, we created the streamlit app: 
+For dynamic visualization, we created the streamlit app where we can plot the various variables we discussed here. In addtion to what is dicussed in the plot, we added addtional plots (MO's data we discussed in the presentation and so on).  
+Noth that for county maps in the app, using altair kept showing errors, we decided to use matplotlib instead.   
 
-In addtion, to assess whether hardship clusters geographically, we compute Local Moran’s I (LISA) as an addtional dynamic static plot in the streamlit.
 ```{python}
 #| echo: false
 #| eval: false
@@ -481,33 +390,15 @@ gg["significant"] = moran_loc.p_sim < 0.05
 gg[["state_name", "cluster", "significant"]].head(10)
 ```
 
----
 
 # 6. Discussion
-
-## What We Learn
-### Visualization
+### What we learn
 - The policy (cep participation rate) covers those in need in some degrees
 - However, it may be associated with political affiliation at the state level  
 
-### Regression
-- State-level policy intensity (CEP) does not independently predict hardship once controls are included.
-- Economic fundamentals dominate.
-
-## Limitations
-### Visualization
+### Limitations
 - Only focus on IL data at the county level  
-### Regression
-- State-level aggregation masks within-state disparities.
-- Cross-sectional design prevents causal claims.
-- Policy variables may operate more strongly at district level.
-- Potential multicollinearity among demographic controls.
-
----
 
 # 7. Conclusion
 Overall, the school meal program covers high-need regions. However, political leanings are also associated with the policy advancement, especially at the state level. Thus, institutional drive at the state level may be a key to further promote the policies.  
-State-level OLS results show that CEP participation and NSLP dollars per school-age child are not statistically associated with child hardship indicators.
-Child food hardship at the state level appears more strongly associated with structural socioeconomic conditions than with CEP participation or NSLP spending intensity. 
 
----
